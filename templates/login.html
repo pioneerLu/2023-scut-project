@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>医院系统</title>
+	<link rel="stylesheet" href="/static/css/element.css">
+	<link rel="stylesheet" href="/static/css/index.css">
+	<link rel="stylesheet" href="/static/css/login.css">
+	<script src="/static/js/vue.js"></script>
+	<script src="/static/js/axios.js"></script>
+	<script src="/static/js/helper.js"></script>
+	<script src="/static/js/element.js"></script>
+	<style></style>
+</head>
+<body>
+  <div id="app">
+    <!-- 登陆表单 -->
+    <div class="login-container">
+      <el-form ref="loginForm" :model="loginInfo" class="login-form" label-position="left">
+        <div class="title-container">
+          <h1 class="title">医院系统</h1>
+        </div>
+        <!-- 切换面板 -->
+        <el-tabs v-model="activeSystem">
+          <el-tab-pane label="患者" name="patient"></el-tab-pane>
+          <el-tab-pane label="医生" name="doctor"></el-tab-pane>
+          <el-tab-pane label="管理员" name="admin"></el-tab-pane>
+        </el-tabs>
+        <el-form-item>
+          <el-input v-model="loginInfo.name" placeholder="请输入账户"/>
+        </el-form-item>
+        <el-form-item>
+          <el-input ref="password" v-model="loginInfo.password" placeholder="请输入密码" type="password"/>
+        </el-form-item>
+        <el-form-item v-if="activeSystem === 'patient'">
+          <el-row :gutter="20">
+            <el-col :span="12">
+              <el-button style="width: 100%;" type="warning" plain @click="showRegisterForm = true">患者注册</el-button>
+            </el-col>
+            <el-col :span="12">
+              <el-button style="width: 100%;" type="warning" @click="onLogin(1)">患者登录</el-button>
+            </el-col>
+          </el-row>
+        </el-form-item>
+        <el-form-item v-if="activeSystem === 'doctor'">
+          <el-button style="width: 100%;" type="primary" @click="onLogin(2)">医生登录</el-button>
+        </el-form-item>
+        <el-form-item v-if="activeSystem === 'admin'">
+          <el-button style="width: 100%;" type="primary" @click="onLogin(3)">管理员登录</el-button>
+        </el-form-item>
+      </el-form>
+    </div>
+
+    <!-- 注册弹窗 -->
+    <el-dialog title="患者注册" :visible.sync="showRegisterForm">
+      <el-form ref="registerForm" :model="registerInfo" :rules="registerRules" label-width="80px" label-position="left">
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="registerInfo.name"/>
+        </el-form-item>
+        <el-form-item label="身份证" prop="id_card">
+          <el-input v-model="registerInfo.id_card"/>
+        </el-form-item>
+        <el-form-item label="电话" prop="phone">
+          <el-input v-model="registerInfo.phone"/>
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="registerInfo.password"/>
+        </el-form-item>
+        <el-form-item label="性别" prop="sex">
+          <el-select v-model="registerInfo.sex" placeholder="请选择性别">
+            <el-option label="男" :value="1"></el-option>
+            <el-option label="女" :value="2"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="年龄" prop="age">
+          <el-input v-model="registerInfo.age" type="number"/>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="showRegisterForm = false">取 消</el-button>
+        <el-button type="primary" @click="onRegisterPatient">确 定</el-button>
+      </div>
+    </el-dialog>
+  </div>
+</body>
+<!-- 脚本 -->
+<script>
+  new Vue({
+    el: '#app',
+    data() {
+      return {
+        activeSystem: 'patient',
+        loginInfo: {
+          name: '',
+          password: ''
+        },
+        // 患者注册
+        showRegisterForm: false,
+        registerInfo: {
+          name: '',
+          id_card: '',
+          phone: '',
+          password: '',
+          sex: 1,
+          age: ''
+        },
+        registerRules: {
+          name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+          id_card: [{ required: true, message: '请输入身份证', trigger: 'blur' }],
+          phone: [{ required: true, message: '请输入电话号', trigger: 'blur' }],
+          password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+          sex: [{ required: true, message: '请选择性别', trigger: 'change' }],
+          age: [{ required: true, message: '请输入年龄', trigger: 'blur' }]
+        }
+      }
+    },
+    methods: {
+      // 登陆
+      onLogin(type) {
+        const { name, password } = this.loginInfo
+        if (!name || !password) {
+          this.NotifyFail('请输入账户、密码')
+          return
+        }
+        if (type === 1) {
+          // 患者登陆
+          axios.post(ToDJ('patientLogin'), new URLSearchParams(this.loginInfo)).then(res => {
+            if (res.data.code === 0) {
+              this.NotifySuc("登陆成功")
+              console.log(res.data.data)
+              window.localStorage.setItem("hospital_userInfo", JSON.stringify(res.data.data))
+              window.location.href = '/patient'
+            } else {
+              this.NotifyFail(res.data.data)
+            }
+          })
+        } else if (type === 2) {
+          // 医生登陆
+          axios.post(ToDJ('doctorLogin'), new URLSearchParams(this.loginInfo)).then(res => {
+            if (res.data.code === 0) {
+              this.NotifySuc("登陆成功")
+              console.log(res.data.data)
+              window.localStorage.setItem("hospital_userInfo", JSON.stringify(res.data.data))
+              window.location.href = '/doctor'
+            } else {
+              this.NotifyFail(res.data.data)
+            }
+          })
+        } else if (type === 3) {
+          // 管理员登陆
+          axios.post(ToDJ('adminLogin'), new URLSearchParams(this.loginInfo)).then(res => {
+            if (res.data.code === 0) {
+              this.NotifySuc("登陆成功")
+              console.log(res.data.data)
+              window.location.href = '/admin'
+            } else {
+              this.NotifyFail(res.data.data)
+            }
+          })
+          
+        }
+      },
+      // 患者注册
+      onRegisterPatient() {
+        this.$refs.registerForm.validate((valid) => {
+          if (valid) {
+            axios.post(ToDJ('patientRegister'), new URLSearchParams(this.registerInfo)).then(res => {
+              if (res.data.code === 0) {
+                this.NotifySuc("注册成功")
+                this.showRegisterForm = false
+              } else {
+                this.NotifyFail(res.data.data)
+              }
+            })
+          }
+        })
+      },
+      // 成功提示
+      NotifySuc(str) {
+        this.$message({
+          message: str,
+          type: 'success'
+        })
+			},
+      // 错误提示
+			NotifyFail(str) {
+        this.$message({
+          message: str,
+          type: 'warning'
+        })
+			}
+    }
+  })
+</script>

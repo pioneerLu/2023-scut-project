@@ -1,0 +1,181 @@
+{%extends "patient.html" %}
+ <!-- 导航标记 -->
+{% block order %}active{% endblock %}
+<!-- 内容区 -->
+{% block mainbody %}
+
+{% verbatim %}
+<div id="app2" class="container">
+  <div class="department-table">
+    <el-table
+      :data="list"
+      stripe
+      style="width: 100%">
+      <el-table-column
+        prop="id"
+        label="就诊号">
+      </el-table-column>
+      <el-table-column
+        prop="department_name"
+        label="科室"
+        width="100">
+      </el-table-column>
+      <el-table-column
+        prop="registration_fee"
+        label="挂号费">
+      </el-table-column>
+      <el-table-column
+        prop="doctor_name"
+        label="主治医师">
+      </el-table-column>
+      <el-table-column
+        prop="order_advice"
+        label="医嘱">
+      </el-table-column>
+      <el-table-column
+        prop="medicine_list"
+        label="开药">
+        <template slot-scope="{ row }">
+          <el-button v-if="row.medicine_list" type="text" @click="onShowMedicine(row)">查看清单</el-button>
+        </template>
+      </el-table-column>
+      <el-table-column
+        prop="total_cost"
+        label="总费用">
+      </el-table-column>
+      <el-table-column
+        prop="status"
+        label="状态"
+        :formatter="onFormatterOrderStatus">
+      </el-table-column>
+      <el-table-column
+        prop="time"
+        label="创建时间"
+        width="140">
+      </el-table-column>
+    </el-table>
+  </div>
+  <!-- 药品清单 -->
+  <el-dialog title="药品清单" :visible.sync="showMedicine" width="50%">
+    <el-table
+      :data="medicineList"
+      style="width: 100%">
+      <el-table-column
+        prop="id"
+        label="编号"
+        align="center">
+      </el-table-column>
+      <el-table-column
+        prop="name"
+        label="名称"
+        align="center">
+      </el-table-column>
+      <el-table-column
+        prop="price"
+        label="价格"
+        align="center">
+        <template slot-scope="{ row }">
+          {{row.price}}元 每{{row.unit}}
+        </template>
+      </el-table-column>
+    </el-table>
+  </el-dialog>
+</div>
+{% endverbatim %}
+<script>
+  new Vue({
+    el: '#app2',
+    data() {
+      return {
+        list: [],
+        userInfo: {
+          user_id: ''
+        },
+        OrderStatusList: [
+          { id: 1, name: '挂号完成' },
+          { id: 2, name: '问诊完成' }
+        ],
+        // 查看药品
+        showMedicine: false,
+        medicineList: []
+      }
+    },
+    mounted() {
+      let userInfo = window.localStorage.getItem("hospital_userInfo")
+      if (userInfo) {
+        userInfo = JSON.parse(userInfo)
+        this.userInfo.user_id = userInfo.id
+      }
+      this.getOrderList()
+    },
+    methods: {
+      getOrderList() {
+        axios.post(ToDJ('orderList'), new URLSearchParams({ user_id: this.userInfo.user_id })).then(res => {
+          if (res.data.code === 0) {
+            const list = res.data.data
+            for (const item of list) {
+              item.time = this.formateTime(item.time)
+            }
+            this.list = list
+          } else {
+            this.NotifyFail(res.data.data)
+          }
+        })
+      },
+      // 就诊状态格式化
+      onFormatterOrderStatus(row, column, callValue, index) {
+        for (const item of this.OrderStatusList) {
+          if (item.id === row.status) {
+            return item.name
+          }
+        }
+        return ''
+      },
+      // 查看药品
+      onShowMedicine(row) {
+        const { medicine_list } = row
+        axios.post(ToDJ('medicineStrList'), new URLSearchParams({ medicine_list })).then(res => {
+          if (res.data.code === 0) {
+            const list = res.data.data
+            this.medicineList = list
+            this.showMedicine = true
+          } else {
+            this.NotifyFail(res.data.data)
+          }
+        })
+      },
+      // 成功提示
+      NotifySuc(str) {
+        this.$message({
+          message: str,
+          type: 'success'
+        })
+			},
+      // 错误提示
+			NotifyFail(str) {
+        this.$message({
+          message: str,
+          type: 'warning'
+        })
+			},
+      // 格式化时间
+      formateTime(oriDate) {
+        if (!oriDate) {
+          return ''
+        }
+        const formateDate = new Date(oriDate)
+        const year =  formateDate.getFullYear()
+        const month =  formateDate.getMonth() + 1
+        const day = formateDate.getDate()
+        let h = formateDate.getHours()
+        let m = formateDate.getMinutes()
+        let s = formateDate.getSeconds()
+        h = h >= 10 ? h : `0${h}`
+        m = m >= 10 ? m : `0${m}`
+        s = s >= 10 ? s : `0${s}`
+        return `${year}-${month}-${day} ${h}:${m}`
+      }
+    }
+  })
+</script>
+{% endblock %}

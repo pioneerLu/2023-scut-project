@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>用户系统</title>
+	<link rel="stylesheet" href="/static/css/element.css">
+	<link rel="stylesheet" href="/static/css/index.css">
+	<link rel="stylesheet" href="/static/css/admin.css">
+	<script src="/static/js/vue.js"></script>
+	<script src="/static/js/axios.js"></script>
+	<script src="/static/js/helper.js"></script>
+	<script src="/static/js/element.js"></script>
+</head>
+<body>
+  <div id="app" class="app-warpper">
+    <div class="app-header">
+			<h2>医生平台</h2>
+			<a href="../login" class="menu-item">
+				<span slot="title">登出</span>
+			</a>
+		</div>
+    <div class="app-body">
+			<div class="app-menu">
+				<a href="../doctor_home" class="menu-item {% block home %}{% endblock %}">
+					<i class="el-icon-document"></i>
+					<span slot="title">接诊房间</span>
+				</a>
+				<a href="../doctor_order" class="menu-item {% block order %}{% endblock %}">
+					<i class="el-icon-setting"></i>
+					<span slot="title">接诊记录</span>
+				</a>
+			</div>
+			<div class="app-container">
+				{% block mainbody %}
+				{% endblock %}
+			</div>
+		</div>
+  </div>
+</body>

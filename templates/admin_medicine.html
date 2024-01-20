@@ -1,0 +1,138 @@
+{%extends "admin.html" %}
+ <!-- 导航标记 -->
+{% block medicine %}active{% endblock %}
+<!-- 内容区 -->
+{% block mainbody %}
+
+{% verbatim %}
+<div id="app2" class="container">
+  <div class="filter-container">
+    <div class="filter-item">
+      <el-button @click="onAddMedicine">添加</el-button>
+    </div>
+  </div>
+  <div class="department-table">
+    <el-table
+      :data="list"
+      stripe
+      style="width: 100%">
+      <el-table-column
+        prop="id"
+        label="编号"
+        width="180">
+      </el-table-column>
+      <el-table-column
+        prop="name"
+        label="名称"
+        width="180">
+      </el-table-column>
+      <el-table-column
+        prop="price"
+        label="单价">
+      </el-table-column>
+      <el-table-column
+        prop="unit"
+        label="单位">
+      </el-table-column>
+    </el-table>
+  </div>
+
+  <!-- 添加药品弹窗 -->
+  <el-dialog title="添加药品" :visible.sync="showAddMedicineForm">
+    <el-form ref="addMedicineForm" :model="addMedicineInfo" :rules="medicineRules" label-width="80px" label-position="left">
+      <el-form-item label="名称" prop="name">
+        <el-input v-model="addMedicineInfo.name"/>
+      </el-form-item>
+      <el-form-item label="单价" prop="price">
+        <el-input v-model="addMedicineInfo.price"/>
+      </el-form-item>
+      <el-form-item label="单位" prop="unit">
+        <el-input v-model="addMedicineInfo.unit"/>
+      </el-form-item>
+    </el-form>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="showAddMedicineForm = false">取 消</el-button>
+      <el-button type="primary" @click="onSubmitAddMedicine">确 定</el-button>
+    </div>
+  </el-dialog>
+</div>
+{% endverbatim %}
+<script>
+  new Vue({
+    el: '#app2',
+    data() {
+      return {
+        list: [],
+        // 添加
+        addMedicineFormType: 1,
+        showAddMedicineForm: false,
+        addMedicineInfo: {
+          id: '',
+          name: '',
+          price: '',
+          unit: ''
+        },
+        medicineRules: {
+          name: [{ required: true, message: '请输入名称', trigger: 'blur' }],
+          price: [{ required: true, message: '请输入单价', trigger: 'blur' }],
+          unit: [{ required: true, message: '请输入单位', trigger: 'blur' }]
+        }
+      }
+    },
+    mounted() {
+      this.getMedicineList()
+    },
+    methods: {
+      getMedicineList() {
+        // 获取列表
+        axios.post(ToDJ('medicineList'), new URLSearchParams()).then(res => {
+          if (res.data.code === 0) {
+            console.log(res.data.data)
+            this.list = res.data.data
+          } else {
+            this.NotifyFail(res.data.data)
+          }
+        })
+      },
+      // 点击添加
+      onAddMedicine() {
+        this.addMedicineFormType = 1
+        this.showAddMedicineForm = true
+      },
+      // 提交添加
+      onSubmitAddMedicine() {
+        this.$refs.addMedicineForm.validate((valid) => {
+          if (valid) {
+            // 新添加
+            if (this.addMedicineFormType === 1) {
+              axios.post(ToDJ('medicineAdd'), new URLSearchParams(this.addMedicineInfo)).then(res => {
+                if (res.data.code === 0) {
+                  this.NotifySuc("添加成功")
+                  this.showAddMedicineForm = false
+                  this.getMedicineList()
+                } else {
+                  this.NotifyFail(res.data.data)
+                }
+              })
+            }
+          }
+        })
+      },
+      // 成功提示
+      NotifySuc(str) {
+        this.$message({
+          message: str,
+          type: 'success'
+        })
+			},
+      // 错误提示
+			NotifyFail(str) {
+        this.$message({
+          message: str,
+          type: 'warning'
+        })
+			}
+    }
+  })
+</script>
+{% endblock %}

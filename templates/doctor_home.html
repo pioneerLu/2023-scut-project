@@ -1,0 +1,226 @@
+{%extends "doctor.html" %}
+ <!-- 导航标记 -->
+{% block home %}active{% endblock %}
+<!-- 内容区 -->
+{% block mainbody %}
+
+{% verbatim %}
+<div id="app2" class="container">
+  <el-row :gutter="20" style="width: 100%; height: 100%;">
+    <el-col :span="12">
+      <div class="info-wrapper">
+        <div class="header">就诊区</div>
+        <el-form ref="orderInfoForm" :model="orderInfo" :rules="orderRules" label-width="80px" label-position="left">
+          <el-form-item label="姓名" prop="patient_name">
+            <el-input v-model="orderInfo.patient_name"/>
+          </el-form-item>
+          <el-form-item label="科室" prop="department_name">
+            <el-input v-model="orderInfo.department_name"/>
+          </el-form-item>
+          <el-form-item label="患者自述" prop="readme">
+            <el-input v-model="orderInfo.readme"/>
+          </el-form-item>
+          <el-form-item label="医嘱" prop="order_advice">
+            <el-input v-model="orderInfo.order_advice"/>
+          </el-form-item>
+          <el-form-item label="药" prop="medicine_list">
+            <el-select v-model="orderInfo.medicine_list" multiple placeholder="请选择药品" style="width: 100%;">
+              <el-option
+              v-for="item in medicine_list"
+              :key="item.id"
+              :label="item.name"
+              :value="item.id">
+              <span style="float: left">{{ item.name }}</span>
+              <span style="float: right; color: #8492a6; font-size: 13px">{{ item.price }}/{{ item.unit }}</span>
+            </el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button style="width: 100%;" type="primary" @click="onSubmitOrder">完 成</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+    </el-col>
+    <el-col :span="12">
+      <div class="info-wrapper">
+        <div class="header">待诊区</div>
+        <el-table
+          :data="list"
+          stripe
+          style="width: 100%">
+          <el-table-column
+            prop="patient_name"
+            label="患者"
+            width="70">
+          </el-table-column>
+          <el-table-column
+            prop="department_name"
+            label="科室"
+            width="100">
+          </el-table-column>
+          <el-table-column
+            prop="readme"
+            label="患者自述"
+            width="100">
+          </el-table-column>
+          <el-table-column
+            prop="time"
+            label="创建时间"
+            width="140">
+          </el-table-column>
+        </el-table>
+      </div>
+    </el-col>
+  </el-row>
+</div>
+{% endverbatim %}
+<script>
+  new Vue({
+    el: '#app2',
+    data() {
+      return {
+        list: [],
+        userInfo: {
+          user_id: '',
+          department_id: ''
+        },
+        OrderStatusList: [
+          { id: 1, name: '挂号完成' },
+          { id: 2, name: '问诊完成' },
+          { id: 3, name: '就诊完成' }
+        ],
+        orderInfo: {
+          id: '',
+          patient_id: '',
+          patient_name: '',
+          department_id: '',
+          department_name: '',
+          readme: '',
+          registration_fee: '',
+          order_advice: '',
+          medicine_list: '',
+          total_cost: '',
+          time: ''
+        },
+        orderRules: {
+          order_advice: [{ required: true, message: '请输入医嘱', trigger: 'blur' }]
+        },
+        medicine_list: []
+      }
+    },
+    mounted() {
+      let userInfo = window.localStorage.getItem("hospital_userInfo")
+      if (userInfo) {
+        userInfo = JSON.parse(userInfo)
+        this.userInfo.user_id = userInfo.id
+        this.userInfo.department_id = userInfo.department_id
+      }
+      this.getMedicineList()
+      this.getOrderList()
+    },
+    methods: {
+      getOrderList() {
+        axios.post(ToDJ('orderList'), new URLSearchParams({ department_id: this.userInfo.department_id, status: 1 })).then(res => {
+          if (res.data.code === 0) {
+            const list = res.data.data
+            for (const item of list) {
+              item.time = this.formateTime(item.time)
+            }
+            this.list = list
+            if (list.length > 0) {
+              this.orderInfo.id = list[0].id
+              this.getOrderDetail()
+            } else {
+              this.NotifyFail('暂无病人')
+            }
+          } else {
+            this.NotifyFail(res.data.data)
+          }
+        })
+      },
+      // 获取订单详情
+      getOrderDetail() {
+        axios.post(ToDJ('orderInfo'), new URLSearchParams({ id: this.orderInfo.id })).then(res => {
+          if (res.data.code === 0) {
+            const info = res.data.data
+            info.time = this.formateTime(info.time)
+            this.orderInfo = info
+          } else {
+            this.NotifyFail(res.data.data)
+          }
+        })
+      },
+      // 获取药列表
+      getMedicineList() {
+        // 获取列表
+        axios.post(ToDJ('medicineList'), new URLSearchParams()).then(res => {
+          if (res.data.code === 0) {
+            this.medicine_list = res.data.data
+          } else {
+            this.NotifyFail(res.data.data)
+          }
+        })
+      },
+      // 完成就诊
+      onSubmitOrder() {
+        this.$refs.orderInfoForm.validate((valid) => {
+          if (valid) {
+            const { user_id } = this.userInfo
+            const { id, order_advice, medicine_list } = this.orderInfo
+            const data = {id, doctor_id: user_id, order_advice, medicine_list}
+            axios.post(ToDJ('orderFinish'), new URLSearchParams(data)).then(res => {
+              if (res.data.code === 0) {
+                this.getOrderList()
+                this.NotifySuc('完成')
+                Object.assign(this.orderInfo, this.$options.data().orderInfo)
+              } else {
+                this.NotifyFail(res.data.data)
+              }
+            })
+          }
+        })
+      },
+      // 就诊状态格式化
+      onFormatterOrderStatus(row, column, callValue, index) {
+        for (const item of this.OrderStatusList) {
+          if (item.id === row.status) {
+            return item.name
+          }
+        }
+        return ''
+      },
+      // 成功提示
+      NotifySuc(str) {
+        this.$message({
+          message: str,
+          type: 'success'
+        })
+			},
+      // 错误提示
+			NotifyFail(str) {
+        this.$message({
+          message: str,
+          type: 'warning'
+        })
+			},
+      // 格式化时间
+      formateTime(oriDate) {
+        if (!oriDate) {
+          return ''
+        }
+        const formateDate = new Date(oriDate)
+        const year =  formateDate.getFullYear()
+        const month =  formateDate.getMonth() + 1
+        const day = formateDate.getDate()
+        let h = formateDate.getHours()
+        let m = formateDate.getMinutes()
+        let s = formateDate.getSeconds()
+        h = h >= 10 ? h : `0${h}`
+        m = m >= 10 ? m : `0${m}`
+        s = s >= 10 ? s : `0${s}`
+        return `${year}-${month}-${day} ${h}:${m}`
+      }
+    }
+  })
+</script>
+{% endblock %}

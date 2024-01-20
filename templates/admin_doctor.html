@@ -1,0 +1,205 @@
+
+
+{% extends "admin.html" %}
+<!-- 导航标记 -->
+{% block doctor %}active{% endblock %}
+<!-- 内容区 -->
+{% block mainbody %}
+{% verbatim %}
+<div id="app2" class="container">
+  <div class="filter-container">
+    <div class="filter-item">
+      <el-button @click="onAddDoctor">添加</el-button>
+      <el-button @click="onMarkSuperDoctor">标记为特级医生</el-button>
+    </div>
+  </div>
+  <div class="department-table">
+    <el-table
+      :data="list"
+      stripe
+      style="width: 100%"
+      @selection-change="handleSelectionChange">
+      <el-table-column
+        type="selection"
+        width="55">
+      </el-table-column>
+      <el-table-column
+        prop="id"
+        label="编号"
+        width="180">
+      </el-table-column>
+      <el-table-column
+        prop="name"
+        label="名称"
+        width="180">
+      </el-table-column>
+      <el-table-column
+        prop="id_card"
+        label="身份证">
+      </el-table-column>
+      <el-table-column
+        prop="department_name"
+        label="科室">
+      </el-table-column>
+      <el-table-column
+        prop="is_super_doctor"
+        label="是否为特级医生">
+      </el-table-column>
+    </el-table>
+  </div>
+
+  <!-- 弹窗模板 -->
+<el-dialog title="输入医生信息" :visible.sync="showDoctorInfoDialog">
+  <el-form :model="doctorInfo" label-width="110px" label-position="left">
+    <el-form-item label="工作年限">
+      <el-input v-model="doctorInfo.workingYears"/>
+    </el-form-item>
+    <el-form-item label="专业研究方向">
+      <el-input v-model="doctorInfo.specialty"/>
+    </el-form-item>
+    <el-form-item label="专长">
+      <el-input v-model="doctorInfo.haha"/>
+    </el-form-item>
+  </el-form>
+  <div slot="footer" class="dialog-footer">
+    <el-button @click="showDoctorInfoDialog = false">取 消</el-button>
+    <el-button type="primary" @click="onConfirmDoctorInfo">确 定</el-button>
+  </div>
+</el-dialog>
+
+  <!-- 添加医生弹窗 -->
+  <el-dialog title="添加医生" :visible.sync="showAddDoctorForm">
+    <el-form ref="addDoctorForm" :model="addDoctorInfo" :rules="doctorRules" label-width="80px" label-position="left">
+      <el-form-item label="姓名" prop="name">
+        <el-input v-model="addDoctorInfo.name"/>
+      </el-form-item>
+      <el-form-item label="身份证" prop="id_card">
+        <el-input v-model="addDoctorInfo.id_card"/>
+      </el-form-item>
+      <el-form-item label="科室" prop="department_id">
+        <el-input v-model="addDoctorInfo.department_id"/>
+      </el-form-item>
+      <el-form-item label="密码" prop="password">
+        <el-input v-model="addDoctorInfo.password"/>
+      </el-form-item>
+    </el-form>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="showAddDoctorForm = false">取 消</el-button>
+      <el-button type="primary" @click="onSubmitAddDoctor">确 定</el-button>
+    </div>
+  </el-dialog>
+</div>
+
+
+{% endverbatim %}
+<script>
+  new Vue({
+    el: '#app2',
+    data() {
+      return {
+        list: [],
+        showDoctorInfoDialog: false,  // 控制医生信息弹窗显示/隐藏
+        doctorInfo: {workingYears: '',specialty: '',haha: ''},
+        panduan:false,
+        // 添加
+        addDoctorFormType: 1,
+        showAddDoctorForm: false,
+        addDoctorInfo: {
+          id: '',
+          name: '',
+          id_card: '',
+          department_id: '',
+          password: ''
+        },
+        doctorRules: {
+          name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+          id_card: [{ required: true, message: '请输入身份证', trigger: 'blur' }],
+          department_id: [{ required: true, message: '请选中科室', trigger: 'change' }],
+          password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+        },
+        // 选中的医生
+        selectedDoctors: []
+      }
+    },
+    mounted() {
+      this.getDoctorList()
+    },
+    methods: {
+      getDoctorList() {
+        axios.post(ToDJ('doctorList'), new URLSearchParams()).then(res => {
+          if (res.data.code === 0) {
+            console.log(res.data.data)
+            if (!this.panduan){
+              this.list = res.data.data.map(doctor => ({ ...doctor, is_super_doctor: "否" }));
+            }
+          else {this.list = res.data.data;}
+
+          } else {
+            this.NotifyFail(res.data.data)
+
+          }
+        })
+      },
+      onAddDoctor() {
+        this.addDoctorFormType = 1
+        this.showAddDoctorForm = true
+      },
+      onSubmitAddDoctor() {
+        this.$refs.addDoctorForm.validate((valid) => {
+          if (valid) {
+            if (this.addDoctorFormType === 1) {
+              axios.post(ToDJ('doctorAdd'), new URLSearchParams(this.addDoctorInfo)).then(res => {
+                if (res.data.code === 0) {
+                  this.NotifySuc("添加成功")
+                  this.showAddDoctorForm = false
+                  this.getDoctorList()
+                } else {
+                  this.NotifyFail(res.data.data)
+                }
+              })
+            }
+          }
+        })
+      },
+      onMarkSuperDoctor() {
+        const doctorIds = this.selectedDoctors.map(doctor => doctor.id);
+        if (doctorIds.length === 0) {
+          this.NotifyFail("请选择要标记的医生吧");
+          return;
+        }
+        this.selectedDoctors.forEach(doctor => {
+        doctor.is_super_doctor = "是";
+      });
+        this.NotifySuc("标记成功")
+        this.showDoctorInfoDialog = true;
+      },
+
+      onConfirmDoctorInfo() {
+
+        this.showDoctorInfoDialog = false;
+
+        this.doctorInfo.workingYears = '';
+        this.doctorInfo.specialty = '';
+        this.doctorInfo.haha = '';
+        this.NotifySuc("医生信息已确认");
+      },
+
+      handleSelectionChange(val) {
+        this.selectedDoctors = val;
+      },
+      NotifySuc(str) {
+        this.$message({
+          message: str,
+          type: 'success'
+        })
+      },
+      NotifyFail(str) {
+        this.$message({
+          message: str,
+          type: 'warning'
+        })
+      }
+    }
+  })
+</script>
+{% endblock %}

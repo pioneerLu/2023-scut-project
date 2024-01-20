@@ -1,0 +1,170 @@
+{%extends "admin.html" %}
+ <!-- 导航标记 -->
+{% block patient %}active{% endblock %}
+<!-- 内容区 -->
+{% block mainbody %}
+
+{% verbatim %}
+<div id="app2" class="container">
+  <div class="filter-container">
+    <div class="filter-item">
+      <el-button @click="onAddPatient">添加</el-button>
+    </div>
+  </div>
+  <div class="department-table">
+    <el-table
+      :data="list"
+      stripe
+      style="width: 100%">
+      <el-table-column
+        prop="id"
+        label="编号"
+        width="80">
+      </el-table-column>
+      <el-table-column
+        prop="name"
+        label="名称"
+        width="80">
+      </el-table-column>
+      <el-table-column
+        prop="id_card"
+        label="身份证">
+      </el-table-column>
+      <el-table-column
+        prop="phone"
+        label="电话">
+      </el-table-column>
+      <el-table-column
+        prop="sex"
+        label="性别"
+        :formatter="onFormatterSex"
+        width="80">
+      </el-table-column>
+      <el-table-column
+        prop="age"
+        label="年龄">
+      </el-table-column>
+      <el-table-column
+        prop="is_super_doctor"
+        label="是否为特殊病人">
+      </el-table-column>
+    </el-table>
+  </div>
+
+  <!-- 添加患者弹窗 -->
+  <el-dialog title="添加患者" :visible.sync="showAddPatientForm">
+    <el-form ref="addPatientForm" :model="addPatientInfo" :rules="patientRules" label-width="80px" label-position="left">
+      <el-form-item label="姓名" prop="name">
+        <el-input v-model="addPatientInfo.name"/>
+      </el-form-item>
+      <el-form-item label="身份证" prop="id_card">
+        <el-input v-model="addPatientInfo.id_card"/>
+      </el-form-item>
+      <el-form-item label="密码" prop="password">
+        <el-input v-model="addPatientInfo.password"/>
+      </el-form-item>
+      <el-form-item label="电话" prop="phone">
+        <el-input v-model="addPatientInfo.phone"/>
+      </el-form-item>
+      <el-form-item label="性别" prop="sex">
+        <el-input v-model="addPatientInfo.sex"/>
+      </el-form-item>
+      <el-form-item label="年龄" prop="age">
+        <el-input v-model="addPatientInfo.age"/>
+      </el-form-item>
+    </el-form>
+    <div slot="footer" class="dialog-footer">
+      <el-button @click="showAddPatientForm = false">取 消</el-button>
+      <el-button type="primary" @click="onSubmitAddPatient">确 定</el-button>
+    </div>
+  </el-dialog>
+</div>
+{% endverbatim %}
+<script>
+  new Vue({
+    el: '#app2',
+    data() {
+      return {
+        list: [],
+        // 添加
+        addPatientFormType: 1,
+        showAddPatientForm: false,
+        addPatientInfo: {
+          id: '',
+          name: '',
+          id_card: '',
+          password: '',
+          phone: '',
+          sex: 1,
+          age: 0
+        },
+        patientRules: {
+          name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+          id_card: [{ required: true, message: '请输入身份证', trigger: 'blur' }],
+          department_id: [{ required: true, message: '请选中科室', trigger: 'change' }],
+          password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+        }
+      }
+    },
+    mounted() {
+      this.getPatientList()
+    },
+    methods: {
+      getPatientList() {
+        // 获取列表
+        axios.post(ToDJ('patientList'), new URLSearchParams()).then(res => {
+          if (res.data.code === 0) {
+            console.log(res.data.data)
+            this.list = res.data.data
+            this.list = res.data.data.map(patient => ({ ...patient, is_super_doctor: "否" }));
+          } else {
+            this.NotifyFail(res.data.data)
+          }
+        })
+      },
+      // 点击添加
+      onAddPatient() {
+        this.addPatientFormType = 1
+        this.showAddPatientForm = true
+      },
+      // 提交添加
+      onSubmitAddPatient() {
+        this.$refs.addPatientForm.validate((valid) => {
+          if (valid) {
+            // 新添加
+            if (this.addPatientFormType === 1) {
+              axios.post(ToDJ('patientAdd'), new URLSearchParams(this.addPatientInfo)).then(res => {
+                if (res.data.code === 0) {
+                  this.NotifySuc("添加成功")
+                  this.showAddPatientForm = false
+                  this.getPatientList()
+                } else {
+                  this.NotifyFail(res.data.data)
+                }
+              })
+            }
+          }
+        })
+      },
+      // 性别格式化
+      onFormatterSex(row, column, callValue, index) {
+        return row.sex === 1 ? '男' : '女'
+      },
+      // 成功提示
+      NotifySuc(str) {
+        this.$message({
+          message: str,
+          type: 'success'
+        })
+			},
+      // 错误提示
+			NotifyFail(str) {
+        this.$message({
+          message: str,
+          type: 'warning'
+        })
+			}
+    }
+  })
+</script>
+{% endblock %}
